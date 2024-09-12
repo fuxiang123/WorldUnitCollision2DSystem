@@ -1,5 +1,7 @@
 # WorldUnitCollision2DSystem
 
+## 本系统依赖[Odin Inspector](https://assetstore.unity.com/packages/tools/utilities/odin-inspector-and-serializer-89041)运行。
+
 WorldUnitCollision2DSystem 是一个基于网格的2D碰撞检测系统。它通过一系列使用限制，来换取在碰撞检测上的性能提升。
 
 一般情况下可以满足同屏2000 - 3000个碰撞体之间的碰撞检测需求。
@@ -38,7 +40,9 @@ WorldUnitCollision2DSystem 是一个基于网格的2D碰撞检测系统。它通
 
 ![矩形碰撞器](./Images/WorldUnitCollision2DSystem.png)
 
-WorldUnitCollision2DSystem是负责碰撞检测的核心系统。一般情况下，你需要拖入CollisionLayerConfigSO（碰撞层配置文件）来配置碰撞层，其他保持默认即可。
+WorldUnitCollision2DSystem是负责碰撞检测的核心系统。它通过将空间拆分成一个个网格，并只对在同一个网格中的物体进行碰撞检测，从而减少了碰撞检测的次数。
+
+长时间未存在碰撞物体的网格会自动回收，你可以自己调整网格大小和网格存活时间，来获取最好的效果。但一般情况下，你只需要拖入CollisionLayerConfigSO（碰撞层配置文件）来配置碰撞层，其他保持默认即可。
 
 通过showDebugInfo字段，可以开启或者关闭调试信息。调试信息开启的状态如下。每个网格的左下角表示当前网格的索引（为Vector2Int类型），右下角表示当前网格的碰撞物体数量。
 
