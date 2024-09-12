@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 6032977897062458999}
   - component: {fileID: 2805831734243524538}
   - component: {fileID: 3207980425291855861}
-  - component: {fileID: 380628359766044297}
+  - component: {fileID: 1277530426100780109}
   m_Layer: 0
   m_Name: Bullet
   m_TagString: Untagged
@@ -29,7 +29,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -6.3748026, y: 2.54, z: 0.021226775}
-  m_LocalScale: {x: 0.2, y: 0.2, z: 0.5}
+  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -99,7 +99,7 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!114 &380628359766044297
+--- !u!114 &1277530426100780109
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -108,7 +108,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 957270325262730545}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9e0330d809211274db26e2be09a60615, type: 3}
+  m_Script: {fileID: 11500000, guid: 14ac46b56af43f24cb64f85f57d97e02, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   LayerName: PlayerBullet

@@ -1,18 +1,18 @@
 using UnityEngine;
 
-namespace WorldUnitCollisionSystem.Example
+namespace WorldUnitCollision2DSystem.Example
 {
     public class Enemy : MonoBehaviour
     {
         public float moveSpeed = 3f;
 
         private Transform player;
-        private BoxCollision boxCollision;
+        private WNCBoxCollider boxCollision;
 
         private void Awake()
         {
             player = GameObject.FindGameObjectWithTag("Player").transform;
-            boxCollision = GetComponent<BoxCollision>();
+            boxCollision = GetComponent<WNCBoxCollider>();
             boxCollision.OnTrigger += (bullet, layerName) =>
             {
                 if (layerName == "PlayerBullet")

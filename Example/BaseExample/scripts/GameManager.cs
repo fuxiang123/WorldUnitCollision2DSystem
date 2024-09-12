@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace WorldUnitCollisionSystem.Example
+namespace WorldUnitCollision2DSystem.Example
 {
     public class GameManager : MonoBehaviour
     {

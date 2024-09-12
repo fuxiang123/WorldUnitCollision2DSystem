@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace WorldUnitCollisionSystem
+namespace WorldUnitCollision2DSystem
 {
     // 对象池管理类
     public class WorldUnitObjectPool

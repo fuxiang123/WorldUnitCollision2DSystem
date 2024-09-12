@@ -1,7 +1,7 @@
 
 using UnityEngine;
 
-namespace WorldUnitCollisionSystem
+namespace WorldUnitCollision2DSystem
 {
     public class CameraUtil
     {

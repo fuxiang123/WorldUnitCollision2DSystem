@@ -5,7 +5,7 @@ using System.Linq;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-namespace WorldUnitCollisionSystem
+namespace WorldUnitCollision2DSystem
 {
     [Serializable]
     public class CollisionLayerConfig
@@ -74,7 +74,7 @@ namespace WorldUnitCollisionSystem
         }
     }
 
-    [CreateAssetMenu(fileName = "CollisionLayerConfig", menuName = "WorldUnitCollisionSystem/CollisionLayerConfig")]
+    [CreateAssetMenu(fileName = "CollisionLayerConfig", menuName = "WorldUnitCollision2DSystem/CollisionLayerConfig")]
     public class CollisionLayerConfigSO : ScriptableObject
     {
 

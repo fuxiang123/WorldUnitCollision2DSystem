@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-namespace WorldUnitCollisionSystem.Example
+namespace WorldUnitCollision2DSystem.Example
 {
     public class EnemyPoolManager : MonoBehaviour
     {

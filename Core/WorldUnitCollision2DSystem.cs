@@ -5,39 +5,8 @@ using Sirenix.OdinInspector;
 using UnityEditor;
 using UnityEngine;
 
-namespace WorldUnitCollisionSystem
+namespace WorldUnitCollision2DSystem
 {
-    internal class ObjectWaitTrigger
-    {
-        public GameObject Target;
-        public Action OnTrigger;
-    }
-
-    internal class ObjectWaitTriggerPool
-    {
-        private List<ObjectWaitTrigger> _objectWaitTriggerList = new List<ObjectWaitTrigger>();
-
-        public ObjectWaitTrigger GetObject()
-        {
-            if (_objectWaitTriggerList.Count == 0)
-            {
-                return new ObjectWaitTrigger();
-            }
-            else
-            {
-                var index = _objectWaitTriggerList.Count - 1;
-                var obj = _objectWaitTriggerList[index];
-                _objectWaitTriggerList.RemoveAt(index);
-                return obj;
-            }
-        }
-
-        public void ReturnObject(ObjectWaitTrigger obj)
-        {
-            _objectWaitTriggerList.Add(obj);
-        }
-    }
-
     // 碰撞边界
     public struct CollisionBounds
     {
@@ -55,11 +24,11 @@ namespace WorldUnitCollisionSystem
     }
 
     // 网格碰撞系统
-    public class WorldUnitCollisionSystem : MonoBehaviour
+    public class WorldUnitCollision2DSystem : MonoBehaviour
     {
         [HideInInspector] public Dictionary<Vector2Int, WorldUnit> WorldUnits = new Dictionary<Vector2Int, WorldUnit>();
-        public static WorldUnitCollisionSystem Instance;
-        [SerializeField, LabelText("碰撞层配置文件")] private CollisionLayerConfigSO CollisionLayerConfigSO;
+        public static WorldUnitCollision2DSystem Instance;
+        [LabelText("碰撞层配置文件")] public CollisionLayerConfigSO CollisionLayerConfigSO;
         [SerializeField, LabelText("网格大小")] private float unitWidth = 1;
         [SerializeField, LabelText("网格存活时间")] private float worldUnitRemoveTime = 5;
 
@@ -69,8 +38,6 @@ namespace WorldUnitCollisionSystem
         private List<Action> TriggerActionList = new List<Action>();
         // worldUnit对象池
         private WorldUnitObjectPool worldUnitObjectPool = new WorldUnitObjectPool();
-
-        private Camera _camera;
 #if UNITY_EDITOR
         public bool ShowDebugInfo = true;
 #endif
@@ -166,35 +133,35 @@ namespace WorldUnitCollisionSystem
         void HandleObjectCollision(GameObject activeObj, GameObject otherObj)
         {
             if (!activeObj.activeSelf || !otherObj.activeSelf) return;
-            var activeCollision = activeObj.GetComponent<BoxCollision>();
+            var activeCollision = activeObj.GetComponent<WNCBoxCollider>();
             // 主动层为碰撞盒，被动层为点碰撞器
-            var otherPointCollision = otherObj.GetComponent<PointCollision>();
-            if (activeCollision != null && otherPointCollision != null)
+            var otherPointCollider = otherObj.GetComponent<WNCPointCollider>();
+            if (activeCollision != null && otherPointCollider != null)
             {
-                if (IsCollision(activeCollision.GetBounds(), otherPointCollision.transform.position))
+                if (IsCollision(activeCollision.GetBounds(), otherPointCollider.transform.position))
                 {
                     TriggerActionList.Add(() =>
                     {
                         if (otherObj.activeSelf && activeObj.activeSelf)
                         {
-                            activeCollision.OnTrigger?.Invoke(otherObj, otherPointCollision.LayerName);
+                            activeCollision.OnTrigger?.Invoke(otherObj, otherPointCollider.LayerName);
                         }
                     });
                 }
                 return;
             }
 
-            var otherBoxCollision = otherObj.GetComponent<BoxCollision>();
+            var otherBoxCollider = otherObj.GetComponent<WNCBoxCollider>();
             // 主动和被动层都为碰撞盒
-            if (activeCollision != null && otherBoxCollision != null)
+            if (activeCollision != null && otherBoxCollider != null)
             {
-                if (IsCollision(activeCollision.GetBounds(), otherBoxCollision.GetBounds()))
+                if (IsCollision(activeCollision.GetBounds(), otherBoxCollider.GetBounds()))
                 {
                     TriggerActionList.Add(() =>
                     {
                         if (otherObj.activeSelf && activeObj.activeSelf)
                         {
-                            activeCollision.OnTrigger?.Invoke(otherObj, otherBoxCollision.LayerName);
+                            activeCollision.OnTrigger?.Invoke(otherObj, otherBoxCollider.LayerName);
                         }
                     });
                 }
@@ -202,16 +169,16 @@ namespace WorldUnitCollisionSystem
             }
 
             // 主动层为点碰撞器，被动层为碰撞盒
-            var activePointCollision = activeObj.GetComponent<PointCollision>();
-            if (activePointCollision != null && otherBoxCollision != null)
+            var activePointCollider = activeObj.GetComponent<WNCBoxCollider>();
+            if (activePointCollider != null && otherBoxCollider != null)
             {
-                if (IsCollision(otherBoxCollision.GetBounds(), activeCollision.transform.position))
+                if (IsCollision(otherBoxCollider.GetBounds(), activeCollision.transform.position))
                 {
                     TriggerActionList.Add(() =>
                     {
                         if (otherObj.activeSelf && activeObj.activeSelf)
                         {
-                            activePointCollision.OnTrigger?.Invoke(otherObj, otherBoxCollision.LayerName);
+                            activePointCollider.OnTrigger?.Invoke(otherObj, otherBoxCollider.LayerName);
                         }
                     });
                 }
@@ -233,9 +200,9 @@ namespace WorldUnitCollisionSystem
 
 
         // 获取当前位置的四周格子
-        public HashSet<WorldUnit> GetWorldUnitGroup(BoxCollision collision)
+        public HashSet<WorldUnit> GetWorldUnitGroup(WNCBoxCollider collision)
         {
-            // 获取BoxCollision占据的所有格子
+            // 获取BoxCollider占据的所有格子
             var bounds = collision.GetBounds();
             return GetWorldUnitGroup(bounds);
         }
@@ -243,7 +210,7 @@ namespace WorldUnitCollisionSystem
         // 获取当前位置的四周格子
         public HashSet<WorldUnit> GetWorldUnitGroup(CollisionBounds bound)
         {
-            // 获取BoxCollision占据的所有格子
+            // 获取BoxCollider占据的所有格子
             var xMin = bound.xMin;
             var xMax = bound.xMax;
             var yMin = bound.yMin;

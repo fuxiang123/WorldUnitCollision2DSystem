@@ -4,24 +4,19 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace WorldUnitCollisionSystem
+namespace WorldUnitCollision2DSystem
 {
-    public class BoxCollision : MonoBehaviour
+    public class WNCBoxCollider : AbstractCollider
     {
         public float width = 1;
         public float height = 1;
         public Vector2 offset;
-        // 碰撞层配置
-        public string LayerName;
-        // 碰撞的物体和碰撞层名称
-        public Action<GameObject, string> OnTrigger;
-        // 已经碰撞过的子弹
         private HashSet<WorldUnit> worldUnits;
         void OnDisable()
         {
             if (worldUnits != null)
             {
-                WorldUnitCollisionSystem.Instance.RemoveObject(worldUnits, LayerName, gameObject);
+                WorldUnitCollision2DSystem.Instance.RemoveObject(worldUnits, LayerName, gameObject);
                 worldUnits = null;
             }
         }
@@ -32,18 +27,18 @@ namespace WorldUnitCollisionSystem
             {
                 if (worldUnits != null)
                 {
-                    WorldUnitCollisionSystem.Instance.RemoveObject(worldUnits, LayerName, gameObject);
+                    WorldUnitCollision2DSystem.Instance.RemoveObject(worldUnits, LayerName, gameObject);
                     worldUnits = null;
                 }
                 return;
             }
 
             var bounds = GetBounds();
-            var curWorldUnits = WorldUnitCollisionSystem.Instance.GetWorldUnitGroup(bounds);
+            var curWorldUnits = WorldUnitCollision2DSystem.Instance.GetWorldUnitGroup(bounds);
             if (worldUnits == null || !curWorldUnits.SetEquals(worldUnits))
             {
-                if (worldUnits != null) WorldUnitCollisionSystem.Instance.RemoveObject(worldUnits, LayerName, gameObject);
-                WorldUnitCollisionSystem.Instance.AddObject(curWorldUnits, LayerName, gameObject);
+                if (worldUnits != null) WorldUnitCollision2DSystem.Instance.RemoveObject(worldUnits, LayerName, gameObject);
+                WorldUnitCollision2DSystem.Instance.AddObject(curWorldUnits, LayerName, gameObject);
                 worldUnits = curWorldUnits;
             }
         }
@@ -61,7 +56,7 @@ namespace WorldUnitCollisionSystem
         // 绘制碰撞区域
         void OnDrawGizmosSelected()
         {
-            if (WorldUnitCollisionSystem.Instance != null && !WorldUnitCollisionSystem.Instance.ShowDebugInfo) return;
+            if (WorldUnitCollision2DSystem.Instance != null && !WorldUnitCollision2DSystem.Instance.ShowDebugInfo) return;
             var bounds = GetBounds();
             Gizmos.color = Color.green;
             Vector2 topLeft = new Vector2(bounds.xMin, bounds.yMax);
