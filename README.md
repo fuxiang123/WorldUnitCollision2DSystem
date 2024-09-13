@@ -1,6 +1,6 @@
 # WorldUnitCollision2DSystem
 
-## 本系统依赖[Odin Inspector](https://assetstore.unity.com/packages/tools/utilities/odin-inspector-and-serializer-89041)运行。
+## 当前版本不依赖Odin Inspector运行，会缺少对CollisionLayerConfigSO的校验，请仔细阅读相关部分的文档。
 
 WorldUnitCollision2DSystem 是一个基于网格的2D碰撞检测系统。它通过一系列使用限制，来换取在碰撞检测上的性能提升。
 

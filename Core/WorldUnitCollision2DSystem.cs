@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using Sirenix.OdinInspector;
 using UnityEditor;
 using UnityEngine;
 
@@ -28,9 +26,9 @@ namespace WorldUnitCollision2DSystem
     {
         [HideInInspector] public Dictionary<Vector2Int, WorldUnit> WorldUnits = new Dictionary<Vector2Int, WorldUnit>();
         public static WorldUnitCollision2DSystem Instance;
-        [LabelText("碰撞层配置文件")] public CollisionLayerConfigSO CollisionLayerConfigSO;
-        [SerializeField, LabelText("网格大小")] private float unitWidth = 1;
-        [SerializeField, LabelText("网格存活时间")] private float worldUnitRemoveTime = 5;
+        public CollisionLayerConfigSO CollisionLayerConfigSO;
+        [SerializeField] private float unitWidth = 1;
+        [SerializeField] private float worldUnitRemoveTime = 5;
 
         // 需要删除的网格
         private List<WorldUnit> WorldUnitsToRemove = new List<WorldUnit>();
