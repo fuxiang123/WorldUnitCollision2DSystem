@@ -17,7 +17,9 @@ WorldUnitCollision2DSystem 是一个基于网格的2D碰撞检测系统。它通
 
 ## CollisionLayerConfigSO碰撞层配置文件
 
-碰撞层配置文件是一个 `ScriptableObject`，用来配置碰撞层之间的碰撞关系。
+碰撞层配置文件是一个 `ScriptableObject`，用来配置碰撞层之间的碰撞关系。通过在 `Project` 窗口中右键，选择 `Create -> WorldUnitCollision2DSystem -> CollisionLayerConfigSO` 来创建一个碰撞层配置文件。
+
+将CollisionLayerConfigSO拖动到游戏场景中的WorldUnitCollisionSystem组件里即可生效。
 
 ![碰撞层配置文件](./Images/CollisionLayerConfig.png)
 
@@ -62,7 +64,7 @@ WorldUnitCollision2DSystem是负责碰撞检测的核心系统。它通过将空
 
 在很多射击游戏中，子弹的体积较小，可以近似看作一个点。在不要求高精度碰撞检测的情况下，推荐使用点碰撞器来检测子弹与敌人之间的碰撞。
 
-点状碰撞器拥有最好的性能，如果有可能，请尽量使用点碰撞器来处理较小体积的碰撞物体。
+点状碰撞器拥有最好的性能，如果有可能，请尽量使用点碰撞器来处理较小体积的碰撞物体。如果你的物体比较大，那么可以将其他碰撞器（如矩形碰撞器）稍微调大一点进行弥补。
 
 使用点状碰撞器只需要设置LayerName字段即可。
 
@@ -70,7 +72,7 @@ WorldUnitCollision2DSystem是负责碰撞检测的核心系统。它通过将空
 
 ![矩形碰撞器](./Images/WNCBoxCollider.png)
 
-矩形碰撞器拥有较好的性能，同时支持旋转，可以处理大多数情况下的碰撞检测需求。
+矩形碰撞器可以处理大多数情况下的碰撞检测需求。
 
 通过Width和Height字段，可以设置矩形碰撞器的尺寸。
 通过Offset字段，可以调整矩形碰撞器的位置。    
@@ -81,4 +83,4 @@ WorldUnitCollision2DSystem是负责碰撞检测的核心系统。它通过将空
 
 ### 其他碰撞器
 
-在我看来矩形碰撞器可以满足绝大多数需求。其他碰撞器使用的场景较小，同时也会耗费更高的性能开销。如果你真的有需求可以通过issue进行反馈。
+在需要大量物体碰撞的场景中，一般不会对碰撞有很高的精度要求，矩形碰撞器可以满足绝大多数需求。其他碰撞器使用的场景较小，同时也会耗费更高的性能开销，目前暂无计划实现。如果你真的有需求可以通过issue进行反馈。
