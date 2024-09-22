@@ -112,7 +112,7 @@ namespace WorldUnitCollision2DSystem
         {
             if (worldUnitRemoveTime <= 0) return;
             // 如果当前网格没有物体，则增加时间
-            if (worldUnit.objectCount == 0)
+            if (worldUnit.objectCount <= 0)
             {
                 worldUnit.lastCollisionTime += Time.deltaTime;
                 // 删除长时间没有物体的网格
