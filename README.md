@@ -8,7 +8,7 @@ WorldUnitCollision2DSystem 是一个基于网格的2D碰撞检测系统。它通
 
 ## 快速开始
 
-直接运行Example文件夹下的内容，或者遵循以下步骤。
+将本仓库克隆或下载后直接放入项目中Assets文件夹下，然后直接运行Example文件夹下的内容，或者遵循以下步骤。
 
 1. 从Example文件夹中，将 `WorldUnitCollisionSystem` 预制体 拖入到你的场景中。
 2. 为你的敌人添加 `WNCBoxCollider` 组件，并设置 `LayerName` 为 `Enemy`。
