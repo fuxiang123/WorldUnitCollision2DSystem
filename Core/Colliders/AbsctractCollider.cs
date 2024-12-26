@@ -2,13 +2,14 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace WorldUnitCollision2DSystem
 {
     public class AbstractCollider : MonoBehaviour
     {
-        public string LayerName;
+        [Required] public string LayerName;
         public Action<GameObject, string> OnTrigger;
 
         private void Start()

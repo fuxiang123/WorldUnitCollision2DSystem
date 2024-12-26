@@ -46,7 +46,7 @@ namespace WorldUnitCollision2DSystem
             Instance = this;
         }
 
-        void Update()
+        void LateUpdate()
         {
             CheckCollision();
             TriggerAllCollision();
@@ -132,7 +132,7 @@ namespace WorldUnitCollision2DSystem
         // 处理两个物体的碰撞
         void HandleObjectCollision(GameObject activeObj, GameObject otherObj)
         {
-            if (!activeObj.activeSelf || !otherObj.activeSelf) return;
+            if (activeObj == null || !activeObj.activeSelf || otherObj == null || !otherObj.activeSelf) return;
             var activeCollision = activeObj.GetComponent<WNCBoxCollider>();
             // 主动层为碰撞盒，被动层为点碰撞器
             var otherPointCollider = otherObj.GetComponent<WNCPointCollider>();
@@ -330,6 +330,13 @@ namespace WorldUnitCollision2DSystem
                 AddWorldUnit(index);
             }
             return WorldUnits[index];
+        }
+
+        public void Reset()
+        {
+            WorldUnits.Clear();
+            WorldUnitsToRemove.Clear();
+            TriggerActionList.Clear();
         }
 
 #if UNITY_EDITOR
