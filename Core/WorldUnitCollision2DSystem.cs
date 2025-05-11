@@ -130,60 +130,31 @@ namespace WorldUnitCollision2DSystem
         }
 
         // 处理两个物体的碰撞
-        void HandleObjectCollision(GameObject activeObj, GameObject otherObj)
+        void HandleObjectCollision(AbstractCollider activeCld, AbstractCollider otherCld)
         {
-            if (!activeObj.activeSelf || !otherObj.activeSelf) return;
-            // TODO，不使用GetComponent获取包围盒，而是在初始化的时候将其用Dictionary存储起来，后续从Dictionary直接取出来。
-            var activeCollision = activeObj.GetComponent<WNCBoxCollider>();
-            // 主动层为碰撞盒，被动层为点碰撞器
-            var otherPointCollider = otherObj.GetComponent<WNCPointCollider>();
-            if (activeCollision != null && otherPointCollider != null)
+            if (!activeCld.isActiveAndEnabled || !otherCld.isActiveAndEnabled) return;
+            
+            bool isCollision = false;
+            
+            if (activeCld is WNCBoxCollider && otherCld is WNCBoxCollider)
             {
-                if (IsCollision(activeCollision.GetBounds(), otherPointCollider.transform.position))
-                {
-                    _triggerActionList.Add(() =>
-                    {
-                        if (otherObj.activeSelf && activeObj.activeSelf)
-                        {
-                            activeCollision.OnTrigger?.Invoke(otherObj, otherPointCollider.LayerName);
-                        }
-                    });
-                }
-                return;
+                isCollision = IsCollision((activeCld as WNCBoxCollider).GetBounds(),
+                    (otherCld as WNCBoxCollider).GetBounds());
+            } else if (activeCld is WNCBoxCollider && otherCld is WNCPointCollider)
+            {
+                isCollision = IsCollision((activeCld as WNCBoxCollider).GetBounds(), otherCld.transform.position);
+            } else if (activeCld is WNCPointCollider && otherCld is WNCBoxCollider)
+            {
+                isCollision = IsCollision((otherCld as WNCBoxCollider).GetBounds(), activeCld.transform.position);
             }
-
-            var otherBoxCollider = otherObj.GetComponent<WNCBoxCollider>();
-            // 主动和被动层都为碰撞盒
-            if (activeCollision != null && otherBoxCollider != null)
+            
+            if (isCollision)
             {
-                if (IsCollision(activeCollision.GetBounds(), otherBoxCollider.GetBounds()))
+                _triggerActionList.Add(() =>
                 {
-                    _triggerActionList.Add(() =>
-                    {
-                        if (otherObj.activeSelf && activeObj.activeSelf)
-                        {
-                            activeCollision.OnTrigger?.Invoke(otherObj, otherBoxCollider.LayerName);
-                        }
-                    });
-                }
-                return;
-            }
-
-            // 主动层为点碰撞器，被动层为碰撞盒
-            var activePointCollider = activeObj.GetComponent<WNCBoxCollider>();
-            if (activePointCollider != null && otherBoxCollider != null)
-            {
-                if (IsCollision(otherBoxCollider.GetBounds(), activeCollision.transform.position))
-                {
-                    _triggerActionList.Add(() =>
-                    {
-                        if (otherObj.activeSelf && activeObj.activeSelf)
-                        {
-                            activePointCollider.OnTrigger?.Invoke(otherObj, otherBoxCollider.LayerName);
-                        }
-                    });
-                }
-                return;
+                    if (activeCld.isActiveAndEnabled && otherCld.isActiveAndEnabled)
+                        activeCld.OnTrigger?.Invoke(otherCld.gameObject, otherCld.LayerName);    
+                });
             }
         }
 
@@ -254,7 +225,7 @@ namespace WorldUnitCollision2DSystem
         }
 
         // 添加一个点物体到网格
-        public Vector2Int AddObject(Vector2 position, string layerName, GameObject obj)
+        public Vector2Int AddCollider(Vector2 position, string layerName, AbstractCollider cld)
         {
             if (!CollisionLayerConfigSo.PassiveCollisionLayers.Contains(layerName) && !CollisionLayerConfigSo.ActiveCollisionLayers.Contains(layerName))
             {
@@ -262,28 +233,28 @@ namespace WorldUnitCollision2DSystem
                 return new Vector2Int(0, 0);
             }
             var worldUnit = GetWorldUnit(position);
-            worldUnit.AddObject(layerName, obj);
+            worldUnit.AddCollider(layerName, cld);
             return worldUnit.Index;
         }
 
-        public HashSet<WorldUnit> AddObject(HashSet<WorldUnit> worldUnits, string layerName, GameObject obj)
+        public HashSet<WorldUnit> AddCollider(HashSet<WorldUnit> worldUnits, string layerName, AbstractCollider cld)
         {
             foreach (var worldUnit in worldUnits)
             {
-                worldUnit.AddObject(layerName, obj);
+                worldUnit.AddCollider(layerName, cld);
             }
             return worldUnits;
         }
 
         // 从网格移除点物体
-        public void RemoveObject(Vector2 position, string layerName, GameObject obj)
+        public void RemoveCollider(Vector2 position, string layerName, AbstractCollider cld)
         {
             var worldUnit = GetWorldUnit(position);
-            worldUnit.RemoveObject(layerName, obj);
+            worldUnit.RemoveCollider(layerName, cld);
         }
 
         // 添加碰撞盒物体到网格
-        public HashSet<WorldUnit> AddObject(CollisionBounds collisionBound, string layerName, GameObject obj)
+        public HashSet<WorldUnit> AddCollider(CollisionBounds collisionBound, string layerName, AbstractCollider cld)
         {
             if (!CollisionLayerConfigSo.ActiveCollisionLayers.Contains(layerName) && !CollisionLayerConfigSo.PassiveCollisionLayers.Contains(layerName))
             {
@@ -294,25 +265,25 @@ namespace WorldUnitCollision2DSystem
             var units = GetWorldUnitGroup(collisionBound);
             foreach (var u in units)
             {
-                u.AddObject(layerName, obj);
+                u.AddCollider(layerName, cld);
             }
             return units;
         }
 
         // 移除碰撞盒物体
-        public void RemoveObject(CollisionBounds collisionBound, string layerName, GameObject obj)
+        public void RemoveCollider(CollisionBounds collisionBound, string layerName, AbstractCollider cld)
         {
             foreach (var item in GetWorldUnitGroup(collisionBound))
             {
-                item.RemoveObject(layerName, obj);
+                item.RemoveCollider(layerName, cld);
             }
         }
 
-        public void RemoveObject(HashSet<WorldUnit> units, string layerName, GameObject obj)
+        public void RemoveCollider(HashSet<WorldUnit> units, string layerName, AbstractCollider cld)
         {
             foreach (var item in units)
             {
-                item.RemoveObject(layerName, obj);
+                item.RemoveCollider(layerName, cld);
             }
         }
 

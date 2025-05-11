@@ -14,7 +14,7 @@ namespace WorldUnitCollision2DSystem
             {
                 _camera = Camera.main;
             }
-            var targetScreenPos = _camera.WorldToScreenPoint(target);
+            var targetScreenPos = _camera!.WorldToScreenPoint(target);
             return targetScreenPos.x < -1 || targetScreenPos.x > Screen.width + 1 || targetScreenPos.y < -1 || targetScreenPos.y > Screen.height + 1;
         }
     }

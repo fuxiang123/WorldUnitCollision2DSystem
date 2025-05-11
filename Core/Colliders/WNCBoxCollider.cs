@@ -16,7 +16,7 @@ namespace WorldUnitCollision2DSystem
         {
             if (_worldUnits != null)
             {
-                WorldUnitCollision2DSystem.Instance.RemoveObject(_worldUnits, LayerName, gameObject);
+                WorldUnitCollision2DSystem.Instance.RemoveCollider(_worldUnits, LayerName, this);
                 _worldUnits = null;
             }
         }
@@ -27,7 +27,7 @@ namespace WorldUnitCollision2DSystem
             {
                 if (_worldUnits != null)
                 {
-                    WorldUnitCollision2DSystem.Instance.RemoveObject(_worldUnits, LayerName, gameObject);
+                    WorldUnitCollision2DSystem.Instance.RemoveCollider(_worldUnits, LayerName, this);
                     _worldUnits = null;
                 }
                 return;
@@ -37,8 +37,8 @@ namespace WorldUnitCollision2DSystem
             var curWorldUnits = WorldUnitCollision2DSystem.Instance.GetWorldUnitGroup(bounds);
             if (_worldUnits == null || !curWorldUnits.SetEquals(_worldUnits))
             {
-                if (_worldUnits != null) WorldUnitCollision2DSystem.Instance.RemoveObject(_worldUnits, LayerName, gameObject);
-                WorldUnitCollision2DSystem.Instance.AddObject(curWorldUnits, LayerName, gameObject);
+                if (_worldUnits != null) WorldUnitCollision2DSystem.Instance.RemoveCollider(_worldUnits, LayerName, this);
+                WorldUnitCollision2DSystem.Instance.AddCollider(curWorldUnits, LayerName, this);
                 _worldUnits = curWorldUnits;
             }
         }
@@ -56,7 +56,6 @@ namespace WorldUnitCollision2DSystem
         // 绘制碰撞区域
         void OnDrawGizmosSelected()
         {
-            if (WorldUnitCollision2DSystem.Instance != null && !WorldUnitCollision2DSystem.Instance.showDebugInfo) return;
             var bounds = GetBounds();
             Gizmos.color = Color.green;
             Vector2 topLeft = new Vector2(bounds.XMin, bounds.YMax);

@@ -1,6 +1,5 @@
 using Sirenix.OdinInspector;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace WorldUnitCollision2DSystem
 {
@@ -13,7 +12,7 @@ namespace WorldUnitCollision2DSystem
 
         void OnDisable()
         {
-            if (_currentIndex != _impossibleIndex) WorldUnitCollision2DSystem.Instance.RemoveObject(_currentIndex, LayerName, gameObject);
+            if (_currentIndex != _impossibleIndex) WorldUnitCollision2DSystem.Instance.RemoveCollider(_currentIndex, LayerName, this);
         }
 
         void Update()
@@ -22,7 +21,7 @@ namespace WorldUnitCollision2DSystem
             {
                 if (_currentIndex != _impossibleIndex)
                 {
-                    WorldUnitCollision2DSystem.Instance.RemoveObject(_currentIndex, LayerName, gameObject);
+                    WorldUnitCollision2DSystem.Instance.RemoveCollider(_currentIndex, LayerName, this);
                     _currentIndex = _impossibleIndex;
                 }
                 return;
@@ -32,8 +31,8 @@ namespace WorldUnitCollision2DSystem
             var index = WorldUnitCollision2DSystem.Instance.GetWorldUnitIndex(transform.position);
             if (_currentIndex == _impossibleIndex || index != _currentIndex)
             {
-                WorldUnitCollision2DSystem.Instance.AddObject(transform.position, LayerName, gameObject);
-                if (_currentIndex != _impossibleIndex) WorldUnitCollision2DSystem.Instance.RemoveObject(_currentIndex, LayerName, gameObject);
+                WorldUnitCollision2DSystem.Instance.AddCollider(transform.position, LayerName, this);
+                if (_currentIndex != _impossibleIndex) WorldUnitCollision2DSystem.Instance.RemoveCollider(_currentIndex, LayerName, this);
                 _currentIndex = index;
             }
         }

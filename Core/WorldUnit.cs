@@ -61,24 +61,27 @@ namespace WorldUnitCollision2DSystem
             ObjectCount = 0; // 重置物体计数
         }
 
-        // 顶过layerName存储物体
-        public Dictionary<string, HashSet<GameObject>> LayerObjects = new();
+        // 根据layerName存储物体
+        public Dictionary<string, HashSet<AbstractCollider>> LayerObjects = new();
 
-        public void AddObject(string layerName, GameObject gameObject)
+        public void AddCollider(string layerName, AbstractCollider cld)
         {
             ObjectCount++;
             if (!LayerObjects.ContainsKey(layerName))
             {
-                LayerObjects.Add(layerName, new HashSet<GameObject>());
+                LayerObjects.Add(layerName, new HashSet<AbstractCollider>());
             }
-            LayerObjects[layerName].Add(gameObject);
+            LayerObjects[layerName].Add(cld);
         }
 
-        public void RemoveObject(string layerName, GameObject gameObject)
+        public void RemoveCollider(string layerName, AbstractCollider cld)
         {
-            ObjectCount--;
             if (!LayerObjects.ContainsKey(layerName)) return;
-            LayerObjects[layerName].Remove(gameObject);
+            if (LayerObjects[layerName].Contains(cld))
+            {
+                LayerObjects[layerName].Remove(cld);
+                ObjectCount--;
+            }
         }
 
         public void Clear(string layerName)
