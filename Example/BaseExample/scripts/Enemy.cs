@@ -6,14 +6,14 @@ namespace WorldUnitCollision2DSystem.Example
     {
         public float moveSpeed = 3f;
 
-        private Transform player;
-        private WNCBoxCollider boxCollision;
+        private Transform _player;
+        private WNCBoxCollider _boxCollision;
 
         private void Awake()
         {
-            player = GameObject.FindGameObjectWithTag("Player").transform;
-            boxCollision = GetComponent<WNCBoxCollider>();
-            boxCollision.OnTrigger += (bullet, layerName) =>
+            _player = GameObject.FindGameObjectWithTag("Player").transform;
+            _boxCollision = GetComponent<WNCBoxCollider>();
+            _boxCollision.OnTrigger += (bullet, layerName) =>
             {
                 if (layerName == "PlayerBullet")
                 {
@@ -26,7 +26,7 @@ namespace WorldUnitCollision2DSystem.Example
         private void Update()
         {
             // 敌人朝玩家移动
-            transform.position = Vector2.MoveTowards(transform.position, player.position, moveSpeed * Time.deltaTime);
+            transform.position = Vector2.MoveTowards(transform.position, _player.position, moveSpeed * Time.deltaTime);
         }
     }
 }

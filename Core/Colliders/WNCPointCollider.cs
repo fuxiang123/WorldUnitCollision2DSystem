@@ -1,14 +1,15 @@
-
-using System;
+using Sirenix.OdinInspector;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace WorldUnitCollision2DSystem
 {
     public class WNCPointCollider : AbstractCollider
     {
+        [LabelText("是否在屏幕外禁用")]public bool DisableWhenOutOfCamera = true;
         private Vector2Int _currentIndex;
 
-        private Vector2Int _impossibleIndex = new Vector2Int(int.MaxValue, int.MaxValue);
+        private readonly Vector2Int _impossibleIndex = new(int.MaxValue, int.MaxValue);
 
         void OnDisable()
         {
@@ -17,7 +18,7 @@ namespace WorldUnitCollision2DSystem
 
         void Update()
         {
-            if (CameraUtil.IsOutOfCamera(transform.position))
+            if (DisableWhenOutOfCamera && CameraUtil.IsOutOfCamera(transform.position))
             {
                 if (_currentIndex != _impossibleIndex)
                 {

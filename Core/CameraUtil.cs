@@ -3,18 +3,18 @@ using UnityEngine;
 
 namespace WorldUnitCollision2DSystem
 {
-    public class CameraUtil
+    public static class CameraUtil
     {
-        private static Camera camera;
+        private static Camera _camera;
 
         // 当前目标是否超出摄像机范围
         public static bool IsOutOfCamera(Vector2 target)
         {
-            if (camera == null)
+            if (!_camera)
             {
-                camera = Camera.main;
+                _camera = Camera.main;
             }
-            var targetScreenPos = camera.WorldToScreenPoint(target);
+            var targetScreenPos = _camera.WorldToScreenPoint(target);
             return targetScreenPos.x < -1 || targetScreenPos.x > Screen.width + 1 || targetScreenPos.y < -1 || targetScreenPos.y > Screen.height + 1;
         }
     }

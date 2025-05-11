@@ -1,8 +1,7 @@
-
-using System;
-using System.Collections;
 using System.Collections.Generic;
+using Sirenix.OdinInspector;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace WorldUnitCollision2DSystem
 {
@@ -11,35 +10,36 @@ namespace WorldUnitCollision2DSystem
         public float width = 1;
         public float height = 1;
         public Vector2 offset;
-        private HashSet<WorldUnit> worldUnits;
+        [FormerlySerializedAs("DisableWhenOutOfCamera")] [LabelText("是否在屏幕外禁用")]public bool disableWhenOutOfCamera = true;
+        private HashSet<WorldUnit> _worldUnits;
         void OnDisable()
         {
-            if (worldUnits != null)
+            if (_worldUnits != null)
             {
-                WorldUnitCollision2DSystem.Instance.RemoveObject(worldUnits, LayerName, gameObject);
-                worldUnits = null;
+                WorldUnitCollision2DSystem.Instance.RemoveObject(_worldUnits, LayerName, gameObject);
+                _worldUnits = null;
             }
         }
 
         void Update()
         {
-            if (CameraUtil.IsOutOfCamera(transform.position))
+            if (disableWhenOutOfCamera && CameraUtil.IsOutOfCamera(transform.position))
             {
-                if (worldUnits != null)
+                if (_worldUnits != null)
                 {
-                    WorldUnitCollision2DSystem.Instance.RemoveObject(worldUnits, LayerName, gameObject);
-                    worldUnits = null;
+                    WorldUnitCollision2DSystem.Instance.RemoveObject(_worldUnits, LayerName, gameObject);
+                    _worldUnits = null;
                 }
                 return;
             }
 
             var bounds = GetBounds();
             var curWorldUnits = WorldUnitCollision2DSystem.Instance.GetWorldUnitGroup(bounds);
-            if (worldUnits == null || !curWorldUnits.SetEquals(worldUnits))
+            if (_worldUnits == null || !curWorldUnits.SetEquals(_worldUnits))
             {
-                if (worldUnits != null) WorldUnitCollision2DSystem.Instance.RemoveObject(worldUnits, LayerName, gameObject);
+                if (_worldUnits != null) WorldUnitCollision2DSystem.Instance.RemoveObject(_worldUnits, LayerName, gameObject);
                 WorldUnitCollision2DSystem.Instance.AddObject(curWorldUnits, LayerName, gameObject);
-                worldUnits = curWorldUnits;
+                _worldUnits = curWorldUnits;
             }
         }
 
@@ -56,13 +56,13 @@ namespace WorldUnitCollision2DSystem
         // 绘制碰撞区域
         void OnDrawGizmosSelected()
         {
-            if (WorldUnitCollision2DSystem.Instance != null && !WorldUnitCollision2DSystem.Instance.ShowDebugInfo) return;
+            if (WorldUnitCollision2DSystem.Instance != null && !WorldUnitCollision2DSystem.Instance.showDebugInfo) return;
             var bounds = GetBounds();
             Gizmos.color = Color.green;
-            Vector2 topLeft = new Vector2(bounds.xMin, bounds.yMax);
-            Vector2 topRight = new Vector2(bounds.xMax, bounds.yMax);
-            Vector2 bottomLeft = new Vector2(bounds.xMin, bounds.yMin);
-            Vector2 bottomRight = new Vector2(bounds.xMax, bounds.yMin);
+            Vector2 topLeft = new Vector2(bounds.XMin, bounds.YMax);
+            Vector2 topRight = new Vector2(bounds.XMax, bounds.YMax);
+            Vector2 bottomLeft = new Vector2(bounds.XMin, bounds.YMin);
+            Vector2 bottomRight = new Vector2(bounds.XMax, bounds.YMin);
 
             Gizmos.DrawLine(topLeft, topRight);
             Gizmos.DrawLine(topRight, bottomRight);
