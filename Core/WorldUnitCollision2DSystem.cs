@@ -331,6 +331,6 @@ namespace WorldUnitCollision2DSystem
                 Handles.Label(bottomRight + new Vector2(-0.2f, 0.2f), unit.Value.ObjectCount.ToString());
             }
         }
-    }
 #endif
+    }
 }
