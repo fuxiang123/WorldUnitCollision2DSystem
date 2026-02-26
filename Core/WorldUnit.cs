@@ -58,28 +58,36 @@ namespace WorldUnitCollision2DSystem
             CollisionBounds.XMax = xMin + size;
             CollisionBounds.YMin = yMin;
             CollisionBounds.YMax = yMin + size;
-            ObjectCount = 0; // 重置物体计数
+            ObjectCount = 0;
+            LastCollisionTime = 0;
+            // 清除残留的碰撞体数据
+            foreach (var pair in LayerObjects)
+            {
+                pair.Value.Clear();
+            }
         }
 
-        // 根据layerName存储物体
+        // 按层名（layerName）存储碰撞体
         public Dictionary<string, HashSet<AbstractCollider>> LayerObjects = new();
 
         public void AddCollider(string layerName, AbstractCollider cld)
         {
-            ObjectCount++;
-            if (!LayerObjects.ContainsKey(layerName))
+            if (!LayerObjects.TryGetValue(layerName, out var set))
             {
-                LayerObjects.Add(layerName, new HashSet<AbstractCollider>());
+                set = new HashSet<AbstractCollider>();
+                LayerObjects.Add(layerName, set);
             }
-            LayerObjects[layerName].Add(cld);
+            if (set.Add(cld))
+            {
+                ObjectCount++;
+            }
         }
 
         public void RemoveCollider(string layerName, AbstractCollider cld)
         {
-            if (!LayerObjects.ContainsKey(layerName)) return;
-            if (LayerObjects[layerName].Contains(cld))
+            if (!LayerObjects.TryGetValue(layerName, out var set)) return;
+            if (set.Remove(cld))
             {
-                LayerObjects[layerName].Remove(cld);
                 ObjectCount--;
             }
         }

@@ -12,12 +12,18 @@ namespace WorldUnitCollision2DSystem
         public Vector2 offset;
         [FormerlySerializedAs("DisableWhenOutOfCamera")] [LabelText("是否在屏幕外禁用")]public bool disableWhenOutOfCamera = true;
         private HashSet<WorldUnit> _worldUnits;
+        // 缓存上次的索引范围，避免每帧 new HashSet 进行比较
+        private Vector2Int _lastMinIndex;
+        private Vector2Int _lastMaxIndex;
+        private bool _hasCachedIndex;
+        
         void OnDisable()
         {
             if (_worldUnits != null)
             {
                 WorldUnitCollision2DSystem.Instance.RemoveCollider(_worldUnits, LayerName, this);
                 _worldUnits = null;
+                _hasCachedIndex = false;
             }
         }
 
@@ -29,17 +35,26 @@ namespace WorldUnitCollision2DSystem
                 {
                     WorldUnitCollision2DSystem.Instance.RemoveCollider(_worldUnits, LayerName, this);
                     _worldUnits = null;
+                    _hasCachedIndex = false;
                 }
                 return;
             }
 
             var bounds = GetBounds();
-            var curWorldUnits = WorldUnitCollision2DSystem.Instance.GetWorldUnitGroup(bounds);
-            if (_worldUnits == null || !curWorldUnits.SetEquals(_worldUnits))
+            var sys = WorldUnitCollision2DSystem.Instance;
+            var minIndex = sys.GetWorldUnitIndex(new Vector2(bounds.XMin, bounds.YMin));
+            var maxIndex = sys.GetWorldUnitIndex(new Vector2(bounds.XMax, bounds.YMax));
+            
+            // 只有索引范围变化时才重新注册，避免每帧 new HashSet
+            if (!_hasCachedIndex || minIndex != _lastMinIndex || maxIndex != _lastMaxIndex)
             {
-                if (_worldUnits != null) WorldUnitCollision2DSystem.Instance.RemoveCollider(_worldUnits, LayerName, this);
-                WorldUnitCollision2DSystem.Instance.AddCollider(curWorldUnits, LayerName, this);
+                var curWorldUnits = sys.GetWorldUnitGroup(bounds);
+                if (_worldUnits != null) sys.RemoveCollider(_worldUnits, LayerName, this);
+                sys.AddCollider(curWorldUnits, LayerName, this);
                 _worldUnits = curWorldUnits;
+                _lastMinIndex = minIndex;
+                _lastMaxIndex = maxIndex;
+                _hasCachedIndex = true;
             }
         }
 

@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -32,11 +34,25 @@ namespace WorldUnitCollision2DSystem
         [SerializeField, LabelText("网格存活时间")] private float worldUnitRemoveTime = 5;
 
         private readonly Dictionary<Vector2Int, WorldUnit> WorldUnits = new();
-        // 需要删除的网格
-        private readonly List<WorldUnit> _worldUnitsToRemove = new();
-        // 待触发碰撞的物体
-        private readonly List<Action> _triggerActionList = new();
-        // worldUnit对象池
+        // 待回收网格的索引：用 HashSet 去重，防止 Update 中途异常导致重复加入。
+        private readonly HashSet<Vector2Int> _worldUnitsToRemove = new();
+        // 防止日志刷屏：同一个网格“回收被跳过”的警告只记录一次。
+        private readonly HashSet<Vector2Int> _worldUnitRemovalSkippedLogged = new();
+        // 待触发碰撞的物体（使用结构体避免闭包GC）
+        private readonly struct CollisionPair
+        {
+            public readonly AbstractCollider Active;
+            public readonly AbstractCollider Other;
+            public CollisionPair(AbstractCollider active, AbstractCollider other)
+            {
+                Active = active;
+                Other = other;
+            }
+        }
+        private readonly List<CollisionPair> _triggerList = new();
+        // 碰撞去重，防止跨网格重复检测
+        private readonly HashSet<(int, int)> _collisionPairSet = new();
+        // WorldUnit 对象池
         private readonly WorldUnitObjectPool _worldUnitObjectPool = new();
 #if UNITY_EDITOR
         [FormerlySerializedAs("ShowDebugInfo")] public bool showDebugInfo = true;
@@ -44,33 +60,82 @@ namespace WorldUnitCollision2DSystem
         void Awake()
         {
             Instance = this;
+            if (CollisionLayerConfigSo == null)
+            {
+#if UNITY_EDITOR
+                throw new InvalidOperationException($"{nameof(CollisionLayerConfigSo)} 未在 {name} 上设置。");
+#else
+                Debug.LogError($"{nameof(CollisionLayerConfigSo)} 未在 {name} 上设置，禁用 {nameof(WorldUnitCollision2DSystem)}。", this);
+                enabled = false;
+                return;
+#endif
+            }
         }
 
-        void Update()
+        void LateUpdate()
         {
-            CheckCollision();
-            TriggerAllCollision();
-            RemoveWorldUnits();
+            // 使用 LateUpdate：先让所有碰撞器在 Update 中完成注册/换格子，再在本帧末尾统一做碰撞检测，避免漏检/晚一帧。
+            // 同时：即使用户回调抛异常，也要保证内部状态在本帧结束时被清理干净。
+            _collisionPairSet.Clear();
+            try
+            {
+                CheckCollision();
+                TriggerAllCollision();
+            }
+            finally
+            {
+                RemoveWorldUnits();
+                _triggerList.Clear();
+                _collisionPairSet.Clear();
+            }
         }
 
         // 触发所有的碰撞事件
         private void TriggerAllCollision()
         {
-            _triggerActionList.ForEach(e =>
+            foreach (var pair in _triggerList)
             {
-                e?.Invoke();
-            });
-            _triggerActionList.Clear();
+                if (pair.Active.isActiveAndEnabled && pair.Other.isActiveAndEnabled)
+                {
+                    try
+                    {
+                        pair.Active.OnTrigger?.Invoke(pair.Other.gameObject, pair.Other.LayerName);
+                    }
+                    catch (Exception ex)
+                    {
+#if UNITY_EDITOR
+                        Debug.LogException(ex, pair.Active);
+                        throw;
+#else
+                        Debug.LogException(ex, pair.Active);
+#endif
+                    }
+                }
+            }
+            _triggerList.Clear();
         }
 
         // 移除长时间不用的网格
         private void RemoveWorldUnits()
         {
             if (worldUnitRemoveTime <= 0) return;
-            foreach (var item in _worldUnitsToRemove)
+            foreach (var index in _worldUnitsToRemove)
             {
+                if (!WorldUnits.TryGetValue(index, out var item)) continue;
+
+                // 安全防护：如果某个网格被加入“待回收”后又重新被注册了碰撞体（例如脚本执行顺序或回调副作用），
+                // 则不要回收/入池；并记录一次警告以便排查。
+                if (item.ObjectCount > 0)
+                {
+                    if (_worldUnitRemovalSkippedLogged.Add(index))
+                        Debug.LogWarning($"WorldUnit {index} 已加入待回收列表，但当前包含 {item.ObjectCount} 个碰撞体；跳过回收。", this);
+                    item.LastCollisionTime = 0;
+                    continue;
+                }
+                _worldUnitRemovalSkippedLogged.Remove(index);
+
                 _worldUnitObjectPool.ReturnObject(item);
-                WorldUnits.Remove(item.Index);
+                WorldUnits.Remove(index);
             }
             _worldUnitsToRemove.Clear();
         }
@@ -120,7 +185,7 @@ namespace WorldUnitCollision2DSystem
                 // 删除长时间没有物体的网格
                 if (worldUnit.LastCollisionTime > worldUnitRemoveTime)
                 {
-                    _worldUnitsToRemove.Add(worldUnit);
+                    _worldUnitsToRemove.Add(worldUnit.Index);
                 }
             }
             else if (worldUnit.LastCollisionTime > 0)
@@ -134,27 +199,31 @@ namespace WorldUnitCollision2DSystem
         {
             if (!activeCld.isActiveAndEnabled || !otherCld.isActiveAndEnabled) return;
             
+            // 碰撞去重：防止同一对物体因跨越多个网格而被多次检测
+            int idA = activeCld.GetInstanceID();
+            int idB = otherCld.GetInstanceID();
+            var pairKey = idA < idB ? (idA, idB) : (idB, idA);
+            if (!_collisionPairSet.Add(pairKey)) return;
+            
             bool isCollision = false;
             
-            if (activeCld is WNCBoxCollider && otherCld is WNCBoxCollider)
+            if (activeCld is WNCBoxCollider activeBox && otherCld is WNCBoxCollider otherBox)
             {
-                isCollision = IsCollision((activeCld as WNCBoxCollider).GetBounds(),
-                    (otherCld as WNCBoxCollider).GetBounds());
-            } else if (activeCld is WNCBoxCollider && otherCld is WNCPointCollider)
-            {
-                isCollision = IsCollision((activeCld as WNCBoxCollider).GetBounds(), otherCld.transform.position);
-            } else if (activeCld is WNCPointCollider && otherCld is WNCBoxCollider)
-            {
-                isCollision = IsCollision((otherCld as WNCBoxCollider).GetBounds(), activeCld.transform.position);
+                isCollision = IsCollision(activeBox.GetBounds(), otherBox.GetBounds());
             }
+            else if (activeCld is WNCBoxCollider activeBox2 && otherCld is WNCPointCollider)
+            {
+                isCollision = IsCollision(activeBox2.GetBounds(), otherCld.transform.position);
+            }
+            else if (activeCld is WNCPointCollider && otherCld is WNCBoxCollider otherBox2)
+            {
+                isCollision = IsCollision(otherBox2.GetBounds(), activeCld.transform.position);
+            }
+            // 点碰撞器 vs 点碰撞器：不做碰撞检测，直接 return
             
             if (isCollision)
             {
-                _triggerActionList.Add(() =>
-                {
-                    if (activeCld.isActiveAndEnabled && otherCld.isActiveAndEnabled)
-                        activeCld.OnTrigger?.Invoke(otherCld.gameObject, otherCld.LayerName);    
-                });
+                _triggerList.Add(new CollisionPair(activeCld, otherCld));
             }
         }
 
@@ -182,31 +251,17 @@ namespace WorldUnitCollision2DSystem
         // 获取当前位置的四周格子
         public HashSet<WorldUnit> GetWorldUnitGroup(CollisionBounds bound)
         {
-            // 获取BoxCollider占据的所有格子
-            var XMin = bound.XMin;
-            var XMax = bound.XMax;
-            var YMin = bound.YMin;
-            var YMax = bound.YMax;
-            HashSet<WorldUnit> tempUnits = new HashSet<WorldUnit>
+            // 直接用索引计算，避免浮点遍历的累积误差
+            var minIndex = GetWorldUnitIndex(new Vector2(bound.XMin, bound.YMin));
+            var maxIndex = GetWorldUnitIndex(new Vector2(bound.XMax, bound.YMax));
+            
+            HashSet<WorldUnit> tempUnits = new HashSet<WorldUnit>();
+            for (int x = minIndex.x; x <= maxIndex.x; x++)
             {
-                // 先计算四个角，防止跨边界的情况
-                GetWorldUnit(new Vector2(XMin, YMin)),
-                GetWorldUnit(new Vector2(XMax, YMax)),
-                GetWorldUnit(new Vector2(XMin, YMax)),
-                GetWorldUnit(new Vector2(XMax, YMin))
-            };
-
-            // 计算物体的四个边
-            for (float x = XMin + unitWidth; x < XMax; x += unitWidth)
-            {
-                tempUnits.Add(GetWorldUnit(new Vector2(x, YMin)));
-                tempUnits.Add(GetWorldUnit(new Vector2(x, YMax)));
-            }
-
-            for (float y = YMin + unitWidth; y < YMax; y += unitWidth)
-            {
-                tempUnits.Add(GetWorldUnit(new Vector2(XMin, y)));
-                tempUnits.Add(GetWorldUnit(new Vector2(XMax, y)));
+                for (int y = minIndex.y; y <= maxIndex.y; y++)
+                {
+                    tempUnits.Add(GetWorldUnit(new Vector2Int(x, y)));
+                }
             }
             return tempUnits;
         }
@@ -227,7 +282,16 @@ namespace WorldUnitCollision2DSystem
         // 添加一个点物体到网格
         public Vector2Int AddCollider(Vector2 position, string layerName, AbstractCollider cld)
         {
-            if (!CollisionLayerConfigSo.PassiveCollisionLayers.Contains(layerName) && !CollisionLayerConfigSo.ActiveCollisionLayers.Contains(layerName))
+            if (CollisionLayerConfigSo == null)
+            {
+#if UNITY_EDITOR
+                throw new InvalidOperationException($"{nameof(CollisionLayerConfigSo)} 未在 {name} 上设置。");
+#else
+                Debug.LogError($"{nameof(CollisionLayerConfigSo)} 未在 {name} 上设置，忽略碰撞体注册。", this);
+                return default;
+#endif
+            }
+            if (!CollisionLayerConfigSo.ContainsLayer(layerName))
             {
                 Debug.LogError("没有配置的碰撞层：" + layerName);
                 return new Vector2Int(0, 0);
@@ -246,17 +310,35 @@ namespace WorldUnitCollision2DSystem
             return worldUnits;
         }
 
-        // 从网格移除点物体
+        // 从网格移除点物体（通过位置）
         public void RemoveCollider(Vector2 position, string layerName, AbstractCollider cld)
         {
             var worldUnit = GetWorldUnit(position);
             worldUnit.RemoveCollider(layerName, cld);
         }
 
+        // 从网格移除点物体（通过索引，避免浮点精度问题）
+        public void RemoveCollider(Vector2Int index, string layerName, AbstractCollider cld)
+        {
+            if (WorldUnits.TryGetValue(index, out var worldUnit))
+            {
+                worldUnit.RemoveCollider(layerName, cld);
+            }
+        }
+
         // 添加碰撞盒物体到网格
         public HashSet<WorldUnit> AddCollider(CollisionBounds collisionBound, string layerName, AbstractCollider cld)
         {
-            if (!CollisionLayerConfigSo.ActiveCollisionLayers.Contains(layerName) && !CollisionLayerConfigSo.PassiveCollisionLayers.Contains(layerName))
+            if (CollisionLayerConfigSo == null)
+            {
+#if UNITY_EDITOR
+                throw new InvalidOperationException($"{nameof(CollisionLayerConfigSo)} 未在 {name} 上设置。");
+#else
+                Debug.LogError($"{nameof(CollisionLayerConfigSo)} 未在 {name} 上设置，忽略碰撞体注册。", this);
+                return new HashSet<WorldUnit>();
+#endif
+            }
+            if (!CollisionLayerConfigSo.ContainsLayer(layerName))
             {
                 Debug.LogError("没有配置的碰撞层：" + layerName);
                 return new HashSet<WorldUnit>();
@@ -297,18 +379,21 @@ namespace WorldUnitCollision2DSystem
 
         private WorldUnit GetWorldUnit(Vector2Int index)
         {
-            if (!WorldUnits.ContainsKey(index))
+            if (!WorldUnits.TryGetValue(index, out var worldUnit))
             {
-                AddWorldUnit(index);
+                worldUnit = _worldUnitObjectPool.GetObject(index, unitWidth, index.x * unitWidth, index.y * unitWidth);
+                WorldUnits.Add(index, worldUnit);
             }
-            return WorldUnits[index];
+            return worldUnit;
         }
 
         public void Reset()
         {
             WorldUnits.Clear();
             _worldUnitsToRemove.Clear();
-            _triggerActionList.Clear();
+            _worldUnitRemovalSkippedLogged.Clear();
+            _triggerList.Clear();
+            _collisionPairSet.Clear();
         }
 
 #if UNITY_EDITOR
@@ -327,7 +412,7 @@ namespace WorldUnitCollision2DSystem
                 Gizmos.DrawLine(topRight, bottomRight);
                 Gizmos.DrawLine(bottomRight, bottomLeft);
                 Gizmos.DrawLine(bottomLeft, topLeft);
-                Handles.Label(bottomLeft + new Vector2(0.2f, 0.2f), "(" + unit.Key.x + "," + unit.Key.y + "}");
+                Handles.Label(bottomLeft + new Vector2(0.2f, 0.2f), "(" + unit.Key.x + "," + unit.Key.y + ")");
                 Handles.Label(bottomRight + new Vector2(-0.2f, 0.2f), unit.Value.ObjectCount.ToString());
             }
         }

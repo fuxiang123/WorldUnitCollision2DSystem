@@ -35,7 +35,7 @@ namespace WorldUnitCollision2DSystem
             return _activeCollisionLayers;
         }
 
-        // 获取所有碰撞层，但不包括当前CurrentActiveLayer
+        // 获取所有可选碰撞层，但不包含当前 ActiveLayer
         private List<string> GetCollisionLayers()
         {
             return _activeCollisionLayers.Where(layer => layer != ActiveLayer).Concat(_passiveCollisionLayers).ToList();
@@ -96,8 +96,107 @@ namespace WorldUnitCollision2DSystem
         [ValidateInput("ValidateLayerConfigEmpty", "不能有为空的碰撞层配置")]
         public List<CollisionLayerConfig> CollisionLayerConfigs;
 
+        // 运行时用于 O(1) 查询的 HashSet 缓存
+        private HashSet<string> _activeLayerSet;
+        private HashSet<string> _passiveLayerSet;
+        
+        /// <summary>
+        /// 检查层名是否为已注册的主动或被动碰撞层
+        /// </summary>
+        public bool ContainsLayer(string layerName)
+        {
+            EnsureLayerSets();
+            return _activeLayerSet.Contains(layerName) || _passiveLayerSet.Contains(layerName);
+        }
+        
+        public bool IsActiveLayer(string layerName)
+        {
+            EnsureLayerSets();
+            return _activeLayerSet.Contains(layerName);
+        }
+        
+        public bool IsPassiveLayer(string layerName)
+        {
+            EnsureLayerSets();
+            return _passiveLayerSet.Contains(layerName);
+        }
+        
+        private void EnsureLayerSets()
+        {
+            if (_activeLayerSet == null)
+            {
+#if UNITY_EDITOR
+                if (ActiveCollisionLayers == null)
+                    throw new InvalidOperationException($"{nameof(ActiveCollisionLayers)} 在 {name} 上为 null。");
+                _activeLayerSet = new HashSet<string>(ActiveCollisionLayers);
+#else
+                if (ActiveCollisionLayers == null)
+                {
+                    Debug.LogError($"{nameof(ActiveCollisionLayers)} 在 {name} 上为 null，将按空列表处理。", this);
+                    _activeLayerSet = new HashSet<string>();
+                }
+                else
+                {
+                    _activeLayerSet = new HashSet<string>(ActiveCollisionLayers);
+                }
+#endif
+            }
+
+            if (_passiveLayerSet == null)
+            {
+#if UNITY_EDITOR
+                if (PassiveCollisionLayers == null)
+                    throw new InvalidOperationException($"{nameof(PassiveCollisionLayers)} 在 {name} 上为 null。");
+                _passiveLayerSet = new HashSet<string>(PassiveCollisionLayers);
+#else
+                if (PassiveCollisionLayers == null)
+                {
+                    Debug.LogError($"{nameof(PassiveCollisionLayers)} 在 {name} 上为 null，将按空列表处理。", this);
+                    _passiveLayerSet = new HashSet<string>();
+                }
+                else
+                {
+                    _passiveLayerSet = new HashSet<string>(PassiveCollisionLayers);
+                }
+#endif
+            }
+        }
+        
+        private void RebuildLayerSets()
+        {
+#if UNITY_EDITOR
+            if (ActiveCollisionLayers == null)
+                throw new InvalidOperationException($"{nameof(ActiveCollisionLayers)} 在 {name} 上为 null。");
+            if (PassiveCollisionLayers == null)
+                throw new InvalidOperationException($"{nameof(PassiveCollisionLayers)} 在 {name} 上为 null。");
+            _activeLayerSet = new HashSet<string>(ActiveCollisionLayers);
+            _passiveLayerSet = new HashSet<string>(PassiveCollisionLayers);
+#else
+            if (ActiveCollisionLayers == null)
+            {
+                Debug.LogError($"{nameof(ActiveCollisionLayers)} 在 {name} 上为 null，将按空列表处理。", this);
+                _activeLayerSet = new HashSet<string>();
+            }
+            else
+            {
+                _activeLayerSet = new HashSet<string>(ActiveCollisionLayers);
+            }
+
+            if (PassiveCollisionLayers == null)
+            {
+                Debug.LogError($"{nameof(PassiveCollisionLayers)} 在 {name} 上为 null，将按空列表处理。", this);
+                _passiveLayerSet = new HashSet<string>();
+            }
+            else
+            {
+                _passiveLayerSet = new HashSet<string>(PassiveCollisionLayers);
+            }
+#endif
+        }
+
         private void OnEnable()
         {
+            RebuildLayerSets();
             foreach (var config in CollisionLayerConfigs)
             {
                 config.SetCollisionLayers(ActiveCollisionLayers, PassiveCollisionLayers);
@@ -112,6 +211,7 @@ namespace WorldUnitCollision2DSystem
 
         private void OnCollisionLayersChanged()
         {
+            RebuildLayerSets();
             foreach (var config in CollisionLayerConfigs)
             {
                 config.SetCollisionLayers(ActiveCollisionLayers, PassiveCollisionLayers);
