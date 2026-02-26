@@ -8,7 +8,9 @@ namespace WorldUnitCollision2DSystem
     public class AbstractCollider : MonoBehaviour
     {
         [Required] public string LayerName;
-        public Action<GameObject, string> OnTrigger;
+        public Action<GameObject, string> OnTriggerEnter;
+        public Action<GameObject, string> OnTriggerStay;
+        public Action<GameObject, string> OnTriggerExit;
 
         private void Start()
         {

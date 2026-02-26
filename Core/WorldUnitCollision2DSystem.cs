@@ -49,9 +49,13 @@ namespace WorldUnitCollision2DSystem
                 Other = other;
             }
         }
-        private readonly List<CollisionPair> _triggerList = new();
-        // 碰撞去重，防止跨网格重复检测
-        private readonly HashSet<(int, int)> _collisionPairSet = new();
+        // Enter/Stay/Exit 的触发列表
+        private readonly List<CollisionPair> _enterList = new();
+        private readonly List<CollisionPair> _stayList = new();
+        private readonly List<CollisionPair> _exitList = new();
+        // 前后帧碰撞对集合（key = (idA,idB)，value = 对应的碰撞对）
+        private Dictionary<(int, int), CollisionPair> _prevPairs = new();
+        private Dictionary<(int, int), CollisionPair> _currentPairs = new();
         // WorldUnit 对象池
         private readonly WorldUnitObjectPool _worldUnitObjectPool = new();
 #if UNITY_EDITOR
@@ -76,43 +80,73 @@ namespace WorldUnitCollision2DSystem
         {
             // 使用 LateUpdate：先让所有碰撞器在 Update 中完成注册/换格子，再在本帧末尾统一做碰撞检测，避免漏检/晚一帧。
             // 同时：即使用户回调抛异常，也要保证内部状态在本帧结束时被清理干净。
-            _collisionPairSet.Clear();
+            _currentPairs.Clear();
             try
             {
                 CheckCollision();
+                BuildCollisionEvents();
                 TriggerAllCollision();
             }
             finally
             {
                 RemoveWorldUnits();
-                _triggerList.Clear();
-                _collisionPairSet.Clear();
+                _enterList.Clear();
+                _stayList.Clear();
+                _exitList.Clear();
+                // 交换前后帧集合，复用内存，避免分配
+                var tempPairs = _prevPairs;
+                _prevPairs = _currentPairs;
+                _currentPairs = tempPairs;
             }
         }
 
         // 触发所有的碰撞事件
         private void TriggerAllCollision()
         {
-            foreach (var pair in _triggerList)
+            TriggerList(_enterList, TriggerType.Enter);
+            TriggerList(_stayList, TriggerType.Stay);
+            TriggerList(_exitList, TriggerType.Exit);
+        }
+
+        private enum TriggerType
+        {
+            Enter,
+            Stay,
+            Exit
+        }
+
+        private void TriggerList(List<CollisionPair> list, TriggerType triggerType)
+        {
+            foreach (var pair in list)
             {
-                if (pair.Active.isActiveAndEnabled && pair.Other.isActiveAndEnabled)
+                if (pair.Active == null || pair.Other == null) continue;
+                if (!pair.Active.isActiveAndEnabled || !pair.Other.isActiveAndEnabled) continue;
+
+                try
                 {
-                    try
+                    switch (triggerType)
                     {
-                        pair.Active.OnTrigger?.Invoke(pair.Other.gameObject, pair.Other.LayerName);
-                    }
-                    catch (Exception ex)
-                    {
-#if UNITY_EDITOR
-                        Debug.LogException(ex, pair.Active);
-                        throw;
-#else
-                        Debug.LogException(ex, pair.Active);
-#endif
+                        case TriggerType.Enter:
+                            pair.Active.OnTriggerEnter?.Invoke(pair.Other.gameObject, pair.Other.LayerName);
+                            break;
+                        case TriggerType.Stay:
+                            pair.Active.OnTriggerStay?.Invoke(pair.Other.gameObject, pair.Other.LayerName);
+                            break;
+                        case TriggerType.Exit:
+                            pair.Active.OnTriggerExit?.Invoke(pair.Other.gameObject, pair.Other.LayerName);
+                            break;
                     }
                 }
+                catch (Exception ex)
+                {
+#if UNITY_EDITOR
+                    Debug.LogException(ex, pair.Active);
+                    throw;
+#else
+                    Debug.LogException(ex, pair.Active);
+#endif
+                }
             }
-            _triggerList.Clear();
         }
 
         // 移除长时间不用的网格
@@ -199,12 +233,6 @@ namespace WorldUnitCollision2DSystem
         {
             if (!activeCld.isActiveAndEnabled || !otherCld.isActiveAndEnabled) return;
             
-            // 碰撞去重：防止同一对物体因跨越多个网格而被多次检测
-            int idA = activeCld.GetInstanceID();
-            int idB = otherCld.GetInstanceID();
-            var pairKey = idA < idB ? (idA, idB) : (idB, idA);
-            if (!_collisionPairSet.Add(pairKey)) return;
-            
             bool isCollision = false;
             
             if (activeCld is WNCBoxCollider activeBox && otherCld is WNCBoxCollider otherBox)
@@ -223,7 +251,30 @@ namespace WorldUnitCollision2DSystem
             
             if (isCollision)
             {
-                _triggerList.Add(new CollisionPair(activeCld, otherCld));
+                // 碰撞去重：防止同一对物体因跨越多个网格而被多次检测
+                int idA = activeCld.GetInstanceID();
+                int idB = otherCld.GetInstanceID();
+                var pairKey = idA < idB ? (idA, idB) : (idB, idA);
+                if (_currentPairs.ContainsKey(pairKey)) return;
+                _currentPairs.Add(pairKey, new CollisionPair(activeCld, otherCld));
+            }
+        }
+
+        // 根据前后帧碰撞对集合生成 Enter/Stay/Exit 事件列表
+        private void BuildCollisionEvents()
+        {
+            foreach (var pair in _currentPairs)
+            {
+                if (_prevPairs.ContainsKey(pair.Key))
+                    _stayList.Add(pair.Value);
+                else
+                    _enterList.Add(pair.Value);
+            }
+
+            foreach (var pair in _prevPairs)
+            {
+                if (!_currentPairs.ContainsKey(pair.Key))
+                    _exitList.Add(pair.Value);
             }
         }
 
@@ -392,8 +443,11 @@ namespace WorldUnitCollision2DSystem
             WorldUnits.Clear();
             _worldUnitsToRemove.Clear();
             _worldUnitRemovalSkippedLogged.Clear();
-            _triggerList.Clear();
-            _collisionPairSet.Clear();
+            _enterList.Clear();
+            _stayList.Clear();
+            _exitList.Clear();
+            _prevPairs.Clear();
+            _currentPairs.Clear();
         }
 
 #if UNITY_EDITOR
