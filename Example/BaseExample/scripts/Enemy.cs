@@ -13,12 +13,12 @@ namespace WorldUnitCollision2DSystem.Example
         {
             _player = GameObject.FindGameObjectWithTag("Player").transform;
             _boxCollision = GetComponent<WNCBoxCollider>();
-            _boxCollision.OnTrigger += (bullet, layerName) =>
+            _boxCollision.OnTriggerEnter += (bullet, layerName) =>
             {
                 if (layerName == "PlayerBullet")
                 {
                     EnemyPoolManager.Instance.ReturnToPool(gameObject);
-                    BulletObjectPool.Instance.ReturnToPool(bullet);
+                    bullet.GetComponent<Bullet>()?.Recycle($"Enemy.OnTriggerEnter from {name} (id={GetInstanceID()})");
                 }
             };
         }

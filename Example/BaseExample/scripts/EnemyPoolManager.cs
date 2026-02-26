@@ -48,13 +48,6 @@ namespace WorldUnitCollision2DSystem.Example
             activeEnemyCount--;
         }
 
-        // 在屏幕显示当前敌人数量
-        private void OnGUI()
-        {
-            GUIStyle style = new GUIStyle();
-            style.fontSize = 24; // 增大字体大小
-            style.normal.textColor = Color.white; // 设置文字颜色为白色
-            GUI.Label(new Rect(Screen.width - 200, Screen.height - 100, 200, 20), "当前敌人数量: " + activeEnemyCount, style);
-        }
+        public int ActiveEnemyCount => activeEnemyCount;
     }
 }

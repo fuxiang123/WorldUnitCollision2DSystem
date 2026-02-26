@@ -60,12 +60,6 @@ namespace WorldUnitCollision2DSystem.Example
             }
         }
 
-        private void OnGUI()
-        {
-            GUIStyle style = new GUIStyle();
-            style.fontSize = 24; // 增大字体大小
-            style.normal.textColor = Color.white; // 设置文字颜色为白色
-            GUI.Label(new Rect(Screen.width - 200, Screen.height - 150, 200, 20), "当前FPS: " + fps, style);
-        }
+        public int FPS => fps;
     }
 }
